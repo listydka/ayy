@@ -1,87 +1,143 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Функция для проверки, является ли число простым
+def is_prime(num):
+    if num < 2:
+        return False
+    for i in range(2, int(num**0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
 # Ввод данных
-K = int(input("Введите K="))
-N = int(input("Введите N="))
+K = int(input("Введите K: "))
+N = int(input("Введите N (четное число): "))
 
-# Проверка, что N четное
+# Проверяем, что N четное
 if N % 2 != 0:
-    print("Ошибка: N должно быть четным числом.")
-    exit()
+    raise ValueError("N должно быть четным!")
 
-# Инициализация подматриц с целенаправленным заполнением
-D = np.array(np.random.randint(-10, 10, (N//2, N//2)))
-E = np.array(np.random.randint(-10, 10, (N//2, N//2)))
-C = np.array(np.random.randint(-10, 10, (N//2, N//2)))
-B = np.array(np.random.randint(-10, 10, (N//2, N//2)))
+# Целенаправленное заполнение матрицы A для отладки
+A = np.array([
+    [-10,  3,  5, -2],
+    [  6,  0, -3,  2],
+    [  7,  4, -5,  1],
+    [-6,   1,  9,  8]
+])
 
-# Формируем матрицу A
-A = np.hstack((np.vstack((D, C)), np.vstack((E, B))))
-print("Матрица A:\n", A, "\n")
+# Проверяем, что размеры матрицы A соответствуют N x N
+if A.shape != (N, N):
+    raise ValueError(f"Матрица A должна быть размером {N}x{N}.")
 
-# Разделяем C на нечетные и четные столбцы для подсчета нулевых элементов
-Ccut1 = C[:, 0::2]  # Четные столбцы (индексы 0, 2, 4, ...)
-Ccut2 = C[:, 1::2]  # Нечетные столбцы (индексы 1, 3, 5, ...)
+# Разбиение матрицы A на подматрицы B, C, D, E
+half_N = N // 2
+D = A[:half_N, :half_N]
+E = A[:half_N, half_N:]
+C = A[half_N:, :half_N]
+B = A[half_N:, half_N:]
 
-# Находим количество нулевых элементов в этих столбцах
-Ccut1_zeros = np.sum(Ccut1 == 0)
-Ccut2_zeros = np.sum(Ccut2 == 0)
+# Создаем матрицу F как копию A
+F = np.copy(A)
 
-# Печатаем количество нулевых элементов
-print(f"Количество нулевых в четных столбцах C: {Ccut1_zeros}")
-print(f"Количество нулевых в нечетных столбцах C: {Ccut2_zeros}")
+# Подсчет количества простых чисел в нечетных столбцах подматрицы C
+prime_count = 0
+for i in range(half_N):  # строки
+    for j in range(0, half_N, 2):  # нечетные столбцы
+        if is_prime(C[i, j]):
+            prime_count += 1
 
-# Условие: если нулевых в нечетных столбцах больше, то меняем C и B симметрично,
-# иначе C и E меняем местами несимметрично
-if Ccut1_zeros > Ccut2_zeros:
-    C = np.flip(C, axis=1)
-    B = np.flip(B, axis=1)
-    F = np.hstack((np.vstack((D, E)), np.vstack((C, B))))
+# Подсчет количества нулевых элементов в четных строках подматрицы C
+zero_count = 0
+for i in range(1, half_N, 2):  # четные строки
+    for j in range(half_N):  # все столбцы
+        if C[i, j] == 0:
+            zero_count += 1
+
+# Определение дальнейших действий в зависимости от prime_count и zero_count
+if prime_count > zero_count:
+    # Симметрично меняем местами E и C
+    E, C = np.copy(C[:, ::-1]), np.copy(E[:, ::-1])
 else:
-    F = np.hstack((np.vstack((D, C)), np.vstack((E, B))))
+    # Несимметрично меняем местами C и B
+    C, B = np.copy(B), np.copy(C)
 
-print(f"\nМатрица F:\n {F}\n")
+# Обновляем F после замен
+F[:half_N, half_N:] = E  # E в верхний правый блок
+F[half_N:, :half_N] = C  # C в нижний левый блок
+F[half_N:, half_N:] = B  # B в нижний правый блок
 
-# Проверяем условие для вычисления результата
+# Выводим матрицу A и F
+print("Матрица A:")
+print(A)
+print("Матрица F:")
+print(F)
+
+# Вычисляем определитель матрицы A
 det_A = np.linalg.det(A)
-sum_diag_F = np.sum(np.diagonal(F)) + np.sum(np.fliplr(F).diagonal())  # Сумма диагональных элементов матрицы F
 
-print(f"Определитель матрицы A: {det_A}")
-print(f"Сумма диагональных элементов матрицы F: {sum_diag_F}")
+# Сумма диагональных элементов матрицы F
+diag_sum_F = np.trace(F)
 
-if det_A > sum_diag_F:
-    # Вычисляем выражение A^(-1) * A^T - K * F
-    A_inv = np.linalg.inv(A)
-    A_T = np.transpose(A)
-    G = np.dot(A_inv, A_T) - K * F
-    print("Результат выражения A^(-1) * A^T - K * F:\n", G, "\n")
+# Функция для проверки вырожденности матрицы
+def is_singular(matrix):
+    return np.linalg.det(matrix) == 0
+
+# Выполнение дальнейших операций в зависимости от det_A и diag_sum_F
+if det_A > diag_sum_F:
+    # Вычисление выражения: A-1 * AT – K * F
+    A_inv = np.linalg.inv(A)  # A-1
+    AT = A.T  # A транспонированная
+    result = A_inv.dot(AT) - K * F
 else:
-    # Вычисляем выражение (A^T + G^(-1) - F^(-1)) * K
-    A_T = np.transpose(A)
-    G_inv = np.linalg.inv(np.tril(A))  # Нижняя треугольная матрица из A и её обратная
-    F_inv = np.linalg.inv(F)
-    result = np.dot((A_T + G_inv - F_inv), K)
-    print("Результат выражения (A^T + G^(-1) - F^(-1)) * K:\n", result, "\n")
+    # Вычисление выражения: (AT + G-1 - F-1) * K
+    AT = A.T
+    G = np.tril(A)  # Нижняя треугольная матрица из A
+    
+    # Проверяем, не является ли G вырожденной
+    if is_singular(G):
+        print("Матрица G является вырожденной, невозможно найти обратную матрицу.")
+        G_inv = np.linalg.pinv(G)  # Псевдообратная матрица
+    else:
+        G_inv = np.linalg.inv(G)  # G-1
+    
+    # Проверяем, не является ли F вырожденной
+    if is_singular(F):
+        print("Матрица F является вырожденной, невозможно найти обратную матрицу.")
+        F_inv = np.linalg.pinv(F)  # Псевдообратная матрица
+    else:
+        F_inv = np.linalg.inv(F)  # F-1
+    
+    result = (AT + G_inv - F_inv) * K
 
-# Графики
-plt.title("Зависимости: y = sin от элементов F, x = cos от элементов F")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid()
-plt.plot(np.cos(F), np.sin(F), linestyle="--", color="r")
-plt.show()
+# Вывод результата
+print("Результат вычислений:")
+print(result)
 
-plt.title("Высота столбца от числа элемента первой строки")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid()
-plt.bar(range(0, ((N // 2) * 2)), F[0], color='r', alpha=0.9)
-plt.show()
+# Построение графиков
+# 1. График значений диагональных элементов матрицы F
+diag_elements = np.diag(F)
+plt.figure()
+plt.plot(range(len(diag_elements)), diag_elements, marker='o')
+plt.title('Диагональные элементы матрицы F')
+plt.xlabel('Индекс')
+plt.ylabel('Значение')
+plt.grid(True)
 
-plt.title("Соответствие номера и квадрата элемента из первой строки")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid()
-plt.scatter(range(0, ((N // 2) * 2)), F[0])
+# 2. График суммы строк матрицы F
+row_sums = np.sum(F, axis=1)
+plt.figure()
+plt.bar(range(len(row_sums)), row_sums)
+plt.title('Суммы строк матрицы F')
+plt.xlabel('Индекс строки')
+plt.ylabel('Сумма')
+
+# 3. График распределения значений в матрице F
+plt.figure()
+plt.hist(F.flatten(), bins=10, edgecolor='black')
+plt.title('Распределение значений в матрице F')
+plt.xlabel('Значение')
+plt.ylabel('Частота')
+
+# Показать графики
 plt.show()
