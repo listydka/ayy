@@ -1,0 +1,140 @@
+# Функция для вывода перестановки
+
+def print_permutation(animals):
+
+    print(*animals)
+
+  
+
+# Рекурсивная функция для генерации перестановок
+
+def generate_permutations(animals, start, end):
+
+    if start == end:
+
+        print_permutation(animals)
+
+    else:
+
+        for i in range(start, end + 1):
+
+            # Меняем местами элементы
+
+            animals[start], animals[i] = animals[i], animals[start]
+
+            # Рекурсивный вызов
+
+            generate_permutations(animals, start + 1, end)
+
+            # Возвращаем элементы на место
+
+            animals[start], animals[i] = animals[i], animals[start]
+
+  
+
+# Ввод количества животных
+
+K = int(input("Введите количество животных: "))
+
+  
+
+# Создание списка животных
+
+animals = list(range(1, K + 1))
+
+  
+
+# Генерация всех возможных перестановок
+
+print("Все возможные расстановки клеток для", K, "животных:")
+
+generate_permutations(animals, 0, K - 1)
+
+
+
+Алгоритмический вариант формирования:
+
+import time
+
+# Алгоритмическая версия (рекурсивная)
+def permutations_recursive(arr):
+    if len(arr) == 0:
+        return []
+    elif len(arr) == 1:
+        return [arr]
+    else:
+        result = []
+        for i in range(len(arr)):
+            elem = arr[i]
+            remaining_elements = arr[:i] + arr[i+1:]
+            for p in permutations_recursive(remaining_elements):
+                result.append([elem] + p)
+        return result
+
+# Проверим время выполнения
+K = int(input("Введите количество животных: "))
+animals = list(range(1, K + 1))
+
+start_time = time.time()
+all_permutations_recursive = permutations_recursive(animals)
+end_time = time.time()
+
+print(f"Алгоритмический подход: найдено {len(all_permutations_recursive)} перестановок.")
+print(f"Время выполнения: {end_time - start_time:.5f} секунд")
+
+
+версия с функциями питона:
+
+import itertools
+
+# Версия с использованием itertools
+start_time = time.time()
+all_permutations_itertools = list(itertools.permutations(animals))
+end_time = time.time()
+
+print(f"Использование itertools: найдено {len(all_permutations_itertools)} перестановок.")
+print(f"Время выполнения: {end_time - start_time:.5f} секунд")
+
+
+2. версия с ограничением 
+   
+   Ограничение на расположение объектов: Например, клетки с номерами 1 и 2 не могут находиться рядом друг с другом.
+Целевая функция: Пусть целевая функция минимизирует сумму разниц номеров соседних клеток. Иными словами, мы хотим, чтобы животные с близкими номерами стояли как можно ближе друг к другу.
+Усложненное решение
+Генерация всех перестановок.
+Проверка на соблюдение ограничений (клетки 1 и 2 не должны быть соседями).
+Расчет целевой функции для каждой допустимой перестановки.
+Поиск оптимальной перестановки, которая минимизирует целевую функцию.
+
+import itertools
+
+# Функция для проверки, что клетки 1 и 2 не стоят рядом
+def is_valid(arrangement):
+    for i in range(len(arrangement) - 1):
+        if (arrangement[i] == 1 and arrangement[i+1] == 2) or (arrangement[i] == 2 and arrangement[i+1] == 1):
+            return False
+    return True
+
+# Целевая функция: минимизация разницы номеров соседних клеток
+def objective_function(arrangement):
+    return sum(abs(arrangement[i] - arrangement[i+1]) for i in range(len(arrangement) - 1))
+
+# Функция для генерации всех возможных вариантов расстановки клеток
+def generate_all_arrangements(K):
+    animals = list(range(1, K+1))  # Генерируем список животных от 1 до K
+    all_arrangements = itertools.permutations(animals)  # Генерация всех перестановок
+    
+    # Отбор допустимых перестановок по условию
+    valid_arrangements = [arrangement for arrangement in all_arrangements if is_valid(arrangement)]
+    
+    return valid_arrangements
+
+# Функция для нахождения лучшей расстановки по целевой функции
+def find_best_arrangement(K):
+    valid_arrangements = generate_all_arrangements(K)
+    
+    # Поиск расстановки с минимальной суммой разниц соседних клеток
+    best_arrangement = min(valid_arrangements, key=objective_function)
+    best_value = objective_function(best_arrangement)
+    
+    return best_arrangement, best_value
